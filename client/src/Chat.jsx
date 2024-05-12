@@ -8,6 +8,7 @@ import Contact from "./Contact";
 import SearchRes from "./SearchRes";
 import Request from "./Request";
 
+
 export default function Chat() {
   const [ws, setWs] = useState(null);
   const [onlinePeople, setOnlinePeople] = useState({});
@@ -23,6 +24,8 @@ export default function Chat() {
   const [searchMessage, setSearchMessage] = useState('');
   const [lastMessage, setLastMessage] = useState();
   const [searchorNot, setSearchorNot] = useState("not");
+  const [activeUser, setActiveUser] = useState(null);
+  const [lastMessages, setLastMessages] = useState({});
 
   const { username, id, setId, setUsername } = useContext(UserContext);
 
@@ -140,17 +143,19 @@ export default function Chat() {
       });
   }
 
-  function getLastMessage(id, myId) {
-    axios.get("/getLastMessage", { params: { id: myId, selectedUserId: id } })
-      .then((res) => {
-        if (!res.data.text)
-          setLastMessage(res.data.text)
-        else
-          setLastMessage("Attachment")
-
-      })
-  }
-
+function getLastMessage(userId) {
+  axios.get("/getLastMessage", { params: { id: id, selectedUserId: userId } })
+    .then((res) => {
+      if (res.data && res.data.text) {
+        setLastMessages(prev => ({ ...prev, [userId]: res.data.text }));
+      } else {
+        setLastMessages(prev => ({ ...prev, [userId]: "Attachment" }));
+      }
+    })
+    .catch((error) => {
+      console.error(error);
+    });
+}
   function getSearchRes(ev) {
     ev.preventDefault();
     const regex = new RegExp(searchMessage, "i");
@@ -161,15 +166,6 @@ export default function Chat() {
     setSearchResult(filteredUsers)
     setSearchorNot("search")
   }
-
-
-
-
-  useEffect(() => {
-    axios.get("/getLastMessage", { params: { id } }).then(res => {
-
-    })
-  }, [offlinePeople])
 
   useEffect(() => {
     const div = divUnderMessages.current;
@@ -232,11 +228,11 @@ export default function Chat() {
                   value={searchMessage}
                   onChange={(e) => {
                     setSearchMessage(e.target.value)
-                    {!searchMessage ? setSearchorNot("not") :   setSearchorNot("search")}
+                    { !searchMessage ? setSearchorNot("not") : setSearchorNot("search") }
                   }}
                 />
               </div>
-              {searchMessage&&searchorNot ==="search" ?
+              {searchMessage && searchorNot === "search" ?
                 (
                   <div>
                     <div className="p-2 boarder bg-gray-300 font-bold my-2"> Search Result</div>
@@ -251,7 +247,7 @@ export default function Chat() {
                         myId={id}
                         onDeleteUser={deleteUser}
                         onDeleteChat={deleteChat}
-                        onPreview={getLastMessage}
+
                       />
 
                     ))}
@@ -259,34 +255,73 @@ export default function Chat() {
                 ) : ""}
               <div className="p-2 boarder bg-gray-300 font-bold">All Users</div>
               {Object.keys(onlineFriends).map(userId => (
+                <div>
                 <Contact
                   key={userId}
                   id={userId}
                   username={onlineFriends[userId].username}
-                  onClick={() => setSelectedUserId(userId)}
+                  onClick={() => {
+                    setSelectedUserId(userId);
+                    getLastMessage(userId);
+                  }}
                   selected={userId === selectedUserId}
                   online={true}
                   myId={id}
                   onDeleteUser={deleteUser}
                   onDeleteChat={deleteChat}
-                  onPreview={getLastMessage}
                 />
-
-              ))}
-              {Object.keys(offlinePeople).map(userId => (
+                {selectedUserId === activeUser && activeUser === userId ? (
+                  
+                    <div className={"flex flex-row w-full  " + (selectedUserId === userId ? " bg-red-100" : "")}>
+                      
+                      <button className="bg-blue-300 rounded-full   border-b border-gray-100 flex items-center gap-2 cursor-pointer "
+                        onClick={(ev) => {
+                          console.log("userId : ", userId)
+                          setSelectedUserId(userId)
+                          getLastMessage(userId)
+                        }}>
+                        Export Messages
+                      </button>
+                    </div>
+                  ) : (<div></div>)}
+                <span className="bg-red-100 flex pl-4 ">{selectedUserId === userId ?`preview :  ${ lastMessages[userId] }` : ''}</span>
+              </div>
+            ))}
+            {Object.keys(offlinePeople).map(userId => (
+              <div>
                 <Contact
                   key={userId}
                   id={userId}
                   online={false}
                   myId={id}
                   username={offlinePeople[userId].username}
-                  onClick={() => setSelectedUserId(userId)}
+                  onClick={() => {
+                    setSelectedUserId(userId);
+                    getLastMessage(userId);
+                  }}
                   selected={userId === selectedUserId}
                   onDeleteUser={deleteUser}
                   onDeleteChat={deleteChat}
+                  setActiveUser={setActiveUser}
                 />
-              ))}
-            </div>
+                {selectedUserId === activeUser && activeUser === userId ? (
+                  
+                    <div className={"flex flex-row w-full gap-3 " + (selectedUserId === userId ? " bg-red-100" : "")}>
+                      
+                      <button className="bg-blue-300 rounded-full   border-b border-gray-100 flex items-center gap-2 cursor-pointer "
+                        onClick={(ev) => {
+                          console.log("userId : ", userId)
+                          setSelectedUserId(userId)
+                          getLastMessage(userId)
+                        }}>
+                        Export Messages
+                      </button>
+                    </div>
+                  ) : (<div></div>)}
+                <span className="bg-red-100 flex pl-4 ">{selectedUserId === userId ? `preview :  ${ lastMessages[userId] }`: ''}</span>
+              </div>
+            ))}
+          </div>
           ) : (
             <div className="flex-grow">
               <div className="text-blue-700 font-bold flex p-4">

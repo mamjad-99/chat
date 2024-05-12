@@ -11,6 +11,8 @@ const Request = require("./models/Requests");
 const Friends = require("./models/friends");
 const ws = require("ws");
 const fs = require("fs");
+const path = require('path');
+
 
 dotenv.config();
 
@@ -23,6 +25,7 @@ const bcryptSalt = bcrypt.genSaltSync(10);
 const app = express();
 
 app.use("/uploads", express.static(__dirname + "/uploads"));
+app.use("/export", express.static(__dirname + "/export"));
 app.use(cookieParser());
 app.use(express.json());
 app.use(
@@ -225,25 +228,22 @@ app.post("/deleteUser", async (req, res) => {
 });
 
 app.get("/getLastMessage", async (req, res) => {
-  const { id } = req.query;
+  const { id, selectedUserId } = req.query;
   try {
-    const message = await Message.find({
-      $or: [{ sender: id }, { recipient: id }],
-    }).sort({ createdAt: 1 });
-    // console.log(message);
-    const lastMessages = {};
-    message.map((id, sender, recipient) => {
-      // console.log(sender, recipient);
-      let index = `${sender}${recipient}`;
-      lastMessages[index] = message.text;
-    });
-
-    res.json(message);
+    const lastMessage = await Message.findOne({
+      $or: [
+        { sender: id, recipient: selectedUserId },
+        { recipient: id, sender: selectedUserId },
+      ]
+    }).sort({ createdAt: -1 }); // Sort in descending order to get the last message
+    res.json(lastMessage)[0];
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Server Error" });
   }
 });
+
+
 
 app.post("/deleteChat", async (req, res) => {
   const { id, userId } = req.body;
@@ -316,6 +316,41 @@ app.post("/register", async (req, res) => {
     res.status(500).json("error");
   }
 });
+
+
+app.post("/export", async (req, res) => {
+  const { id, myId } = req.body;
+  console.log(id,myId)
+  try {
+    const messages = await Message.find({
+      $or: [
+        { sender: myId, recipient: id },
+        { sender: id, recipient: myId },
+      ],
+    });
+
+    const chatContent = messages.map((message) => {
+      return `${message.createdAt} - ${message.sender}: ${message.text}\n`;
+    }).join("");
+
+    const exportPath = path.join(__dirname, "export", `${myId}_${id}_chat.txt`);
+    console.log("path :",exportPath)
+    fs.writeFile(exportPath, chatContent, (err) => {
+      if (err) {
+        console.error("Error exporting chat:", err);
+        return res.status(500).json({ message: "Server Error" });
+      }
+      console.log("Chat exported successfully");
+      res.sendStatus(200);
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server Error" });
+  }
+});
+
+
+
 const port = process.env.PORT;
 const server = app.listen(port, () => {
   console.log(`App running on port ${port} ...`);
