@@ -223,6 +223,28 @@ app.post("/deleteUser", async (req, res) => {
     });
   }
 });
+
+app.get("/getLastMessage", async (req, res) => {
+  const { id } = req.query;
+  try {
+    const message = await Message.find({
+      $or: [{ sender: id }, { recipient: id }],
+    }).sort({ createdAt: 1 });
+    // console.log(message);
+    const lastMessages = {};
+    message.map((id, sender, recipient) => {
+      // console.log(sender, recipient);
+      let index = `${sender}${recipient}`;
+      lastMessages[index] = message.text;
+    });
+
+    res.json(message);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server Error" });
+  }
+});
+
 app.post("/deleteChat", async (req, res) => {
   const { id, userId } = req.body;
   try {
@@ -241,6 +263,27 @@ app.post("/deleteChat", async (req, res) => {
     });
   }
 });
+
+app.get("/searchMessage", async (req, res) => {
+  const { id, selectedUserId, searchMessage } = req.query;
+  try {
+    const message = await Message.find({
+      $or: [
+        { sender: id, recipient: selectedUserId },
+        { recipient: id, sender: selectedUserId },
+      ],
+    }).sort({ createdAt: 1 });
+
+    const regex = new RegExp(searchMessage, "i");
+    const result = message.filter((msg) => regex.test(msg.text));
+
+    res.json(result[0]);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server Error" });
+  }
+});
+
 app.post("/register", async (req, res) => {
   const { username, password } = req.body;
   try {

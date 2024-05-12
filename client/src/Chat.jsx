@@ -18,8 +18,11 @@ export default function Chat() {
   const [chatOrRequest, setChatOrRequest] = useState("chat");
   const [onlineFriends, setOnlineFriends] = useState({});
   const [searchText, setSearchText] = useState("");
+  const [searchMessageText, setSearchMessageText] = useState("");
   const [searchResult, setSearchResult] = useState({});
-  const [searchMessage, setSearchMessage] = useState({});
+  const [searchMessage, setSearchMessage] = useState('');
+  const [lastMessage, setLastMessage] = useState();
+  const [searchorNot, setSearchorNot] = useState("not");
 
   const { username, id, setId, setUsername } = useContext(UserContext);
 
@@ -102,19 +105,71 @@ export default function Chat() {
     };
   }
 
-  function searchFirstMessage(ev){
+  function searchFirstMessage(ev) {
     ev.preventDefault();
-    axios.get()
+    axios
+      .get("/searchMessage", {
+        params: {
+          id: id,
+          selectedUserId: selectedUserId,
+          searchMessage: searchMessageText,
+        },
+      })
+      .then((res) => {
+        const message = res.data;
+        if (message) {
+          const firstMessage = messagesWithoutDup.find(
+            (m) => m._id === message._id
+          );
+          if (firstMessage && firstMessage._id === message._id) {
+            const messageElement = document.getElementById(
+              `message-${firstMessage._id}`
+            );
+            if (messageElement) {
+              messageElement.style.backgroundColor = "#ffcccb"; // Highlight color
+              messageElement.scrollIntoView({ behavior: "smooth" });
+              setTimeout(() => {
+                messageElement.style.backgroundColor = ""; // Reset background color
+              }, 5000); // Remove the highlight after 5 seconds
+            }
+          }
+        }
+      })
+      .catch((err) => {
+        console.error(err);
+      });
+  }
+
+  function getLastMessage(id, myId) {
+    axios.get("/getLastMessage", { params: { id: myId, selectedUserId: id } })
+      .then((res) => {
+        if (!res.data.text)
+          setLastMessage(res.data.text)
+        else
+          setLastMessage("Attachment")
+
+      })
   }
 
   function getSearchRes(ev) {
     ev.preventDefault();
-    axios.get("/getFriends", { params: { searchText, id } }).then((res) => {
-      setSearchResult(res.data);
-    }).catch((err) => {
-      console.error(err);
-    });
+    const regex = new RegExp(searchMessage, "i");
+    const filteredUsers = Object.keys(onlineFriends)
+      .filter(userId => regex.test(onlineFriends[userId].username))
+      .map(userId => ({ userId, username: onlineFriends[userId].username }));
+    console.log(filteredUsers);
+    setSearchResult(filteredUsers)
+    setSearchorNot("search")
   }
+
+
+
+
+  useEffect(() => {
+    axios.get("/getLastMessage", { params: { id } }).then(res => {
+
+    })
+  }, [offlinePeople])
 
   useEffect(() => {
     const div = divUnderMessages.current;
@@ -174,10 +229,35 @@ export default function Chat() {
                 </button>
                 <input type="text" placeholder="Search"
                   className="p-2 bg-gray-800 rounded-full text-white flex-grow-50"
-                  value={searchText}
-                  onChange={(e) => setSearchText(e.target.value)}
+                  value={searchMessage}
+                  onChange={(e) => {
+                    setSearchMessage(e.target.value)
+                    {!searchMessage ? setSearchorNot("not") :   setSearchorNot("search")}
+                  }}
                 />
               </div>
+              {searchMessage&&searchorNot ==="search" ?
+                (
+                  <div>
+                    <div className="p-2 boarder bg-gray-300 font-bold my-2"> Search Result</div>
+                    {Object.keys(searchResult).map(userId => (
+                      <Contact
+                        key={userId}
+                        id={userId}
+                        username={searchResult[userId].username}
+                        onClick={() => setSelectedUserId(userId)}
+                        selected={userId === selectedUserId}
+                        online={true}
+                        myId={id}
+                        onDeleteUser={deleteUser}
+                        onDeleteChat={deleteChat}
+                        onPreview={getLastMessage}
+                      />
+
+                    ))}
+                  </div>
+                ) : ""}
+              <div className="p-2 boarder bg-gray-300 font-bold">All Users</div>
               {Object.keys(onlineFriends).map(userId => (
                 <Contact
                   key={userId}
@@ -186,8 +266,10 @@ export default function Chat() {
                   onClick={() => setSelectedUserId(userId)}
                   selected={userId === selectedUserId}
                   online={true}
+                  myId={id}
                   onDeleteUser={deleteUser}
                   onDeleteChat={deleteChat}
+                  onPreview={getLastMessage}
                 />
 
               ))}
@@ -196,6 +278,7 @@ export default function Chat() {
                   key={userId}
                   id={userId}
                   online={false}
+                  myId={id}
                   username={offlinePeople[userId].username}
                   onClick={() => setSelectedUserId(userId)}
                   selected={userId === selectedUserId}
@@ -259,7 +342,7 @@ export default function Chat() {
             {!!selectedUserId && (
               <div className="overflow-y-scroll overflow-x-hidden absolute top-0 right-0 left-0 bottom-2">
                 {messagesWithoutDup.map(message => (
-                  <div key={message._id} className={(message.sender === id ? "justify-end" : "justify-start") + " flex"}>
+                  <div key={message._id} id={`message-${message._id}`} className={(message.sender === id ? "justify-end" : "justify-start") + " flex"}>
                     <div className={"text-left inline-block p-2 my-2 rounded-md text-sm " + (message.sender === id ? ' bg-blue-500 text-white ' : " bg-white text-gray-500 ")}>
                       {message.text}
                       {message.file && (
@@ -272,7 +355,6 @@ export default function Chat() {
                           </a>
                         </div>
                       )}
-
                     </div>
                   </div>
                 ))}
@@ -289,9 +371,11 @@ export default function Chat() {
                     <path fillRule="evenodd" d="M10.5 3.75a6.75 6.75 0 1 0 0 13.5 6.75 6.75 0 0 0 0-13.5ZM2.25 10.5a8.25 8.25 0 1 1 14.59 5.28l4.69 4.69a.75.75 0 1 1-1.06 1.06l-4.69-4.69A8.25 8.25 0 0 1 2.25 10.5Z" clipRule="evenodd" />
                   </svg>
                 </button>
-                <input type="text" placeholder="Search" className="h-10 p-2 w-full"
-                  value={searchMessage}
-                  onChange={ev => setSearchMessage(ev.target.value)}
+                <input
+                  type="text"
+                  placeholder="Search"
+                  className="h-10 p-2 w-full"
+                  onChange={(ev) => setSearchMessageText(ev.target.value)} // Update this line
                 />
               </div>
               <form className="flex gap-2" onSubmit={sendMessage}>
