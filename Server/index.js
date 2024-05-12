@@ -91,7 +91,7 @@ app.post("/acceptRequest", async (req, res) => {
     myId: userId,
     myFriendId: id,
   });
-  await Request.findOneAndDelete({
+  await Request.deleteOne({
     requestSender: userId,
     requestReceiver: id,
   });
@@ -99,7 +99,7 @@ app.post("/acceptRequest", async (req, res) => {
 });
 app.post("/deleteRequest", async (req, res) => {
   const { id, userId } = req.body;
-  const deleteRequest = await Request.findOneAndDelete({
+  const deleteRequest = await Request.deleteOne({
     requestSender: userId,
     requestReceiver: id,
   });
@@ -211,11 +211,11 @@ app.post("/logout", (req, res) => {
 app.post("/deleteUser", async (req, res) => {
   const { id, userId } = req.body;
   try {
-    await Friends.findOneAndDelete({
+    await Friends.deleteOne({
       myId: id,
       myFriendId: userId,
     });
-    await Friends.findOneAndDelete({
+    await Friends.deleteOne({
       myId: userId,
       myFriendId: id,
     });
@@ -248,14 +248,16 @@ app.get("/getLastMessage", async (req, res) => {
 app.post("/deleteChat", async (req, res) => {
   const { id, userId } = req.body;
   try {
-    await Message.findAndDelete({
+    await Message.deleteMany({
       sender: id,
       recipient: userId,
     });
-    await Message.findAndDelete({
-      recipient: userId,
+    
+    await Message.deleteMany({
       sender: id,
+      recipient: userId,
     });
+    
     res.json("ok");
   } catch (err) {
     res.json({
@@ -317,10 +319,38 @@ app.post("/register", async (req, res) => {
   }
 });
 
-
+app.post("/password-reset", async (req, res) => {
+  try {
+      const { username, newPassword } = req.body;
+      const user = await User.findOne({ username });
+      if (!user) {
+          return res.status(404).json({ message: "User not found" });
+      }
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+      await User.updateOne({ username }, { password: hashedPassword });
+      await user.save();
+      jwt.sign(
+          { userId: user._id, username },
+          jwtScrete,
+          {},
+          (err, token) => {
+              if (err) throw err;
+              res
+                  .cookie("token", token, { sameSite: "none", secure: true })
+                  .status(201)
+                  .json({
+                      id: user._id,
+                      username,
+                  });
+          }
+      );
+  } catch (error) {
+      console.error("Error resetting password:", error);
+      res.status(500).json({ message: "Server Error" });
+  }
+});
 app.post("/export", async (req, res) => {
   const { id, myId } = req.body;
-  console.log(id,myId)
   try {
     const messages = await Message.find({
       $or: [
@@ -334,7 +364,6 @@ app.post("/export", async (req, res) => {
     }).join("");
 
     const exportPath = path.join(__dirname, "export", `${myId}_${id}_chat.txt`);
-    console.log("path :",exportPath)
     fs.writeFile(exportPath, chatContent, (err) => {
       if (err) {
         console.error("Error exporting chat:", err);

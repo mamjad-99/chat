@@ -42,10 +42,10 @@ export default function Contact({ id, myId, username, onClick, selected, online,
       <div className="flex gap-5 py-2 pl-4 items-center">
         <button className="rounded-full bg-blue-300 pl-1 px-2" onClick={deleteUser}>Unfriend</button>
         <button className="rounded-full bg-blue-300 pl-1 px-2" onClick={deleteChat}>Delete Messages</button>
+      </div>
         <button className={"rounded-full bg-blue-300 pl-1 px-2" + (exporting ? " opacity-50 cursor-not-allowed" : "")} onClick={exportChat} disabled={exporting}>
           {exporting ? "Exporting..." : "Export Chat"}
         </button>
-      </div>
     </div>
   )
 }

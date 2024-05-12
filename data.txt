@@ -1,0 +1,27 @@
+npm.pakegemanager 		  -> yarn
+Set-ExecutionPolicy RemoteSigned  -> PowerShell
+Set-ExecutionPolicy Restricted	  -> restore Powershell
+
+vs code
+
+client
+npm i -g yarn					-> install yarn
+yarn create vite				-> client-react-javascript
+yarn dev					-> localhost / ip
+yarn add tailwindcss postcss autoprefixer	-> add all this
+npx tailwindcss init -p 			-> install
+yarn add axios					-> install axios
+yarn add lodash					-> for removing dup
+yarn dev					-> run client
+yarn add react-router-dom
+
+api
+yarn add express				-> install express
+yarn add mongoose				-> install mongoose
+yarn add dotenv					-> install dotenv
+yarn add jsonwebtoken				-> install jsonwebtoken
+yarn add cors					-> install cors
+yarn add cookie-parser				-> install cookie-parser
+yarn add bcryptjs				-> install bcrypt
+yarn add ws					-> install web socket
+nodemon index.js				-> run 

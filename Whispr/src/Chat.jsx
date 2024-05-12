@@ -143,19 +143,22 @@ export default function Chat() {
       });
   }
 
-function getLastMessage(userId) {
-  axios.get("/getLastMessage", { params: { id: id, selectedUserId: userId } })
-    .then((res) => {
-      if (res.data && res.data.text) {
-        setLastMessages(prev => ({ ...prev, [userId]: res.data.text }));
-      } else {
-        setLastMessages(prev => ({ ...prev, [userId]: "Attachment" }));
-      }
-    })
-    .catch((error) => {
-      console.error(error);
-    });
-}
+  function getLastMessage(userId) {
+    axios.get("/getLastMessage", { params: { id: id, selectedUserId: userId } })
+      .then((res) => {
+        if (res.data && res.data.text) {
+          setLastMessages(prev => ({ ...prev, [userId]: res.data.text }));
+        } else if (res.data && res.data.file) {
+          setLastMessages(prev => ({ ...prev, [userId]: "Attachment" }));
+        }
+        else {
+          setLastMessages('');
+        }
+      })
+      .catch((error) => {
+        console.error(error);
+      });
+  }
   function getSearchRes(ev) {
     ev.preventDefault();
     const regex = new RegExp(searchMessage, "i");
@@ -209,14 +212,14 @@ function getLastMessage(userId) {
   return (
     <>
       <div className="flex h-screen">
-        <div className="bg-white-100 w-1/3 flex flex-col">
+        <div className="bg-white-100 w-2/5 flex flex-col">
           {chatOrRequest === "chat" ? (
             <div className="flex-grow">
               <div className="text-blue-700 font-bold flex p-4">
                 <img src={logo} alt="Whispr Logo" width="70" height="50" className="mr-2" />
                 <span className="p-5">Whispr</span>
               </div>
-              <div className="p-2 pl-4 border bg-gray-400 text-red-600 font-bold ">Contacts</div>
+              <div className="p-2 pl-4 border bg-gray-400 text-blue-600 font-bold ">Contacts</div>
               <div className="flex items-center gap-2 pl-2 my-3">
                 <button onClick={getSearchRes}>
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">
@@ -256,72 +259,49 @@ function getLastMessage(userId) {
               <div className="p-2 boarder bg-gray-300 font-bold">All Users</div>
               {Object.keys(onlineFriends).map(userId => (
                 <div>
-                <Contact
-                  key={userId}
-                  id={userId}
-                  username={onlineFriends[userId].username}
-                  onClick={() => {
-                    setSelectedUserId(userId);
-                    getLastMessage(userId);
-                  }}
-                  selected={userId === selectedUserId}
-                  online={true}
-                  myId={id}
-                  onDeleteUser={deleteUser}
-                  onDeleteChat={deleteChat}
-                />
-                {selectedUserId === activeUser && activeUser === userId ? (
+                  <Contact
+                    key={userId}
+                    id={userId}
+                    username={onlineFriends[userId].username}
+                    onClick={() => {
+                      setSelectedUserId(userId);
+                      getLastMessage(userId);
+                    }}
+                    selected={userId === selectedUserId}
+                    online={true}
+                    myId={id}
+                    onDeleteUser={deleteUser}
+                    onDeleteChat={deleteChat}
+                  />
                   
-                    <div className={"flex flex-row w-full  " + (selectedUserId === userId ? " bg-red-100" : "")}>
-                      
-                      <button className="bg-blue-300 rounded-full   border-b border-gray-100 flex items-center gap-2 cursor-pointer "
-                        onClick={(ev) => {
-                          console.log("userId : ", userId)
-                          setSelectedUserId(userId)
-                          getLastMessage(userId)
-                        }}>
-                        Export Messages
-                      </button>
-                    </div>
-                  ) : (<div></div>)}
-                <span className="bg-red-100 flex pl-4 ">{selectedUserId === userId ?`preview :  ${ lastMessages[userId] }` : ''}</span>
-              </div>
-            ))}
-            {Object.keys(offlinePeople).map(userId => (
-              <div>
-                <Contact
-                  key={userId}
-                  id={userId}
-                  online={false}
-                  myId={id}
-                  username={offlinePeople[userId].username}
-                  onClick={() => {
-                    setSelectedUserId(userId);
-                    getLastMessage(userId);
-                  }}
-                  selected={userId === selectedUserId}
-                  onDeleteUser={deleteUser}
-                  onDeleteChat={deleteChat}
-                  setActiveUser={setActiveUser}
-                />
-                {selectedUserId === activeUser && activeUser === userId ? (
+                   
+                  {lastMessages && (
+                    <span className="bg-red-100 flex pl-4 ">{selectedUserId === userId ? `preview :  ${lastMessages[userId]}` : ''}</span>
+                  )}</div>
+              ))}
+              {Object.keys(offlinePeople).map(userId => (
+                <div>
+                  <Contact
+                    key={userId}
+                    id={userId}
+                    online={false}
+                    myId={id}
+                    username={offlinePeople[userId].username}
+                    onClick={() => {
+                      setSelectedUserId(userId);
+                      getLastMessage(userId);
+                    }}
+                    selected={userId === selectedUserId}
+                    onDeleteUser={deleteUser}
+                    onDeleteChat={deleteChat}
+                    setActiveUser={setActiveUser}
+                  />
                   
-                    <div className={"flex flex-row w-full gap-3 " + (selectedUserId === userId ? " bg-red-100" : "")}>
-                      
-                      <button className="bg-blue-300 rounded-full   border-b border-gray-100 flex items-center gap-2 cursor-pointer "
-                        onClick={(ev) => {
-                          console.log("userId : ", userId)
-                          setSelectedUserId(userId)
-                          getLastMessage(userId)
-                        }}>
-                        Export Messages
-                      </button>
-                    </div>
-                  ) : (<div></div>)}
-                <span className="bg-red-100 flex pl-4 ">{selectedUserId === userId ? `preview :  ${ lastMessages[userId] }`: ''}</span>
-              </div>
-            ))}
-          </div>
+                  {lastMessages && (
+                    <span className="bg-red-100 flex pl-4 ">{selectedUserId === userId ? `preview :  ${lastMessages[userId]}` : ''}</span>
+                  )}</div>
+              ))}
+            </div>
           ) : (
             <div className="flex-grow">
               <div className="text-blue-700 font-bold flex p-4">

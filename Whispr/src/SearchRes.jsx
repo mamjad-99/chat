@@ -1,11 +1,10 @@
 import { useState } from "react";
 import Avatar from "./Avatar.jsx";
 import axios from "axios";
-
-export default function SearchRes({ id, onlinePeople,myname }) {
+// ADD REMOVE SEND ACCEPT DELETE SEARCHUSER DELETECHAT SEARCHMESSAGE 
+export default function SearchRes({ id, onlinePeople }) {
     const [searchText, setSearchText] = useState("");
     const [searchResult, setSearchResult] = useState({});
-    const [selectedUserId, setSelectedUserId] = useState("");
 
     function getSearchRes(ev) {
         ev.preventDefault();
