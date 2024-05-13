@@ -123,6 +123,12 @@ const checkPassword = async (password, userPassword) => {
 
 app.get("/getUsers", async (req, res) => {
   const searchText = req.query.searchText;
+  if(searchText.includes("'") || searchText.includes('"') ){
+    res.json({
+      status:"error",
+      message:"SQL injection not alloeed"
+    })
+  }
   const id = req.query.id;
   const regex = new RegExp(searchText, "i");
   const users = await User.find({
@@ -177,6 +183,12 @@ app.post("/sendRequest", async (req, res) => {
 
 app.post("/login", async (req, res) => {
   const { username, password } = req.body;
+  if(username.includes("'") || username.includes('"') || password.includes("'") || password.includes('"')){
+    res.json({
+      status:"error",
+      message:"SQL injection not alloeed"
+    })
+  }
   const foundUser = await User.findOne({ username });
   if (foundUser) {
     const passOk = await checkPassword(password, foundUser.password);
@@ -268,6 +280,12 @@ app.post("/deleteChat", async (req, res) => {
 
 app.get("/searchMessage", async (req, res) => {
   const { id, selectedUserId, searchMessage } = req.query;
+  if(searchMessage.includes("'") || searchMessage.includes('"')){
+    res.json({
+      status:"error",
+      message:"SQL injection not alloeed"
+    })
+  }
   try {
     const message = await Message.find({
       $or: [
@@ -288,6 +306,12 @@ app.get("/searchMessage", async (req, res) => {
 
 app.post("/register", async (req, res) => {
   const { username, password } = req.body;
+  if(username.includes("'") || username.includes('"') || password.includes("'") || password.includes('"')){
+    res.json({
+      status:"error",
+      message:"SQL injection not alloeed"
+    })
+  }
   try {
     const hashedPassword = bcrypt.hashSync(password, bcryptSalt);
     const existingUser = await User.findOne({ username });
@@ -322,6 +346,12 @@ app.post("/register", async (req, res) => {
 app.post("/password-reset", async (req, res) => {
   try {
       const { username, newPassword } = req.body;
+      if(username.includes("'") || username.includes('"') || newPassword.includes("'") || newPassword.includes('"')){
+        res.json({
+          status:"error",
+          message:"SQL injection not alloeed"
+        })
+      }
       const user = await User.findOne({ username });
       if (!user) {
           return res.status(404).json({ message: "User not found" });
